@@ -15,8 +15,8 @@ def create_parser():
     parser.add_argument('-i', type=int, required=True)
     # rozmiar zadania
     parser.add_argument('-n', type=int, required=True)
-    # włączanie preprocessingu (domyślnie: brak)
-    parser.add_argument('-p', default=False, action=ap.BooleanOptionalAction)
+    # włączanie preprocessingu (domyślnie włączony, wyłączenie poprzez "--no-preprocess")
+    parser.add_argument('--preprocess', default=True, action=ap.BooleanOptionalAction)
 
     return parser.parse_args()
 
@@ -62,10 +62,13 @@ if __name__ == '__main__':
 
         model = Model(log_output=True)
 
-        if (args.p == False):
+        # Wypisywanie wierzchołków co interwał
+        model.parameters.mip.interval=1
+
+        if (args.preprocess == False):
             model.parameters.preprocessing.presolve = False
 
-        # ZMIENNE
+        # ZMIENNE DECYZYJNE
         # wielkość produkcji wyrobu i, zmienna całkowita
         x = model.integer_var_list(args.n, name="x")
         # zmienna binarna (1, jeżeli wyrób i jest produkowany, 0, jeżeli nie)
@@ -80,7 +83,7 @@ if __name__ == '__main__':
         # (dot. uruchomienia produkcji wyrobu i)
         model.add_constraints((x[i] <= D*y[i] for i in range(args.n)), names="ogr3")
         # ograniczenie związane z całkowitą ilością dostępnego surowca
-        model.add_constraint((sum((p[i]*x[i]+e[i]*y[i]) for i in range(args.n)) <= Q), ctname="ogr4")
+        model.add_constraint((sum(p[i]*x[i]+e[i]*y[i] for i in range(args.n)) <= Q), ctname="ogr4")
 
         # FUNKCJA CELU
         obj_fun = sum(c[i]*x[i]-s[i]*y[i] for i in range(args.n))
